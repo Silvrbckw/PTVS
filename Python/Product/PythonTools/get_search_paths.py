@@ -38,16 +38,14 @@ AFTER_SITE = list(sys.path)
 
 import os
 def clean(path):
-    if path:
-        return os.path.normcase(os.path.abspath(path).rstrip(os.sep))
-    return None
+    return os.path.normcase(os.path.abspath(path).rstrip(os.sep)) if path else None
 
-BEFORE_SITE = set(clean(p) for p in BEFORE_SITE)
-AFTER_SITE = set(clean(p) for p in AFTER_SITE)
+BEFORE_SITE = {clean(p) for p in BEFORE_SITE}
+AFTER_SITE = {clean(p) for p in AFTER_SITE}
 SCRIPT_DIR = clean(os.path.dirname(os.path.realpath(__file__)))
 
 try:
-    SITE_PKGS = set(clean(p) for p in site.getsitepackages())
+    SITE_PKGS = {clean(p) for p in site.getsitepackages()}
 except AttributeError:
     SITE_PKGS = set()
 
@@ -61,7 +59,7 @@ for prefix in [
         continue
 
     BEFORE_SITE.add(clean(prefix))
-    
+
     for subdir in ['DLLs', 'Lib', 'Scripts']:
         d = clean(os.path.join(prefix, subdir))
         BEFORE_SITE.add(d)
@@ -73,7 +71,7 @@ import zipfile
 
 for p in sys.path:
     p = clean(p)
-    
+
     if p == SCRIPT_DIR or p.startswith(SCRIPT_DIR + os.sep):
         continue
 
@@ -81,9 +79,9 @@ for p in sys.path:
         continue
 
     if p in BEFORE_SITE:
-        print("%s|stdlib|" % p)
+        print(f"{p}|stdlib|")
     elif p in AFTER_SITE:
         if p in SITE_PKGS:
-            print("%s|site|" % p)
+            print(f"{p}|site|")
         else:
-            print("%s|pth|" % p)
+            print(f"{p}|pth|")

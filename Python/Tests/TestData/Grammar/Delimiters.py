@@ -9,8 +9,7 @@
 1[...]
 1[:,]
 fob.oar
-fob = 1
-fob += 1
+fob = 1 + 1
 fob -= 1
 fob *= 1
 fob /= 1

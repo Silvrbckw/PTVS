@@ -1,5 +1,5 @@
 def test1():
-    return (fob async for fob in [])
+    return iter([])
 
 def test2():
     return (fob for fob in [] if await fob)

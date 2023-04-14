@@ -30,8 +30,7 @@ def fix_nodeid(nodeid, kind, rootdir=None, #*,
     fileid = nodeid
     remainder = ''
     if kind not in ('folder', 'file'):
-        m = FILE_ID_RE.match(nodeid)
-        if m:
+        if m := FILE_ID_RE.match(nodeid):
             fileid, remainder = m.groups()
         elif len(nodeid) > 1:
             fileid = nodeid[:2]

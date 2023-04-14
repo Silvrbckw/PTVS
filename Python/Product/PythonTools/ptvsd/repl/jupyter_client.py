@@ -38,7 +38,9 @@ try:
     import jupyter_client.manager
     import zmq.error
 except ImportError:
-    raise UnsupportedReplException("Jupyter mode requires the jupyter_client and ipykernel packages. " + traceback.format_exc())
+    raise UnsupportedReplException(
+        f"Jupyter mode requires the jupyter_client and ipykernel packages. {traceback.format_exc()}"
+    )
 
 try:
     import _thread
@@ -64,9 +66,7 @@ class Message(object):
         v = self[attr, self._sentinel]
         if v is self._sentinel:
             return Message({})
-        if isinstance(v, dict):
-            return Message(v)
-        return v
+        return Message(v) if isinstance(v, dict) else v
 
     def __getitem__(self, key):
         if isinstance(key, tuple):
@@ -79,9 +79,7 @@ class Message(object):
             v = self._m[key]
         except KeyError:
             return default_value
-        if isinstance(v, dict):
-            return Message(v)
-        return v
+        return Message(v) if isinstance(v, dict) else v
 
     def __repr__(self):
         return repr(self._m)
@@ -98,21 +96,25 @@ class IntrospectHandler(object):
         self.responded = False
 
     def send(self, expression):
-        if not expression:
-            self.typename = ''
-            msg_id = self._client.complete("")
-            self._suppress_io.add(msg_id)
-            self._on_reply.setdefault((msg_id, 'complete_reply'), []).append(self.complete_reply)
-        else:
-            msg_id = self._client.execute("_=" + expression,
-                store_history=False, allow_stdin=False, silent=True,
-                user_expressions={'m': 'getattr(type(_), "__module__", "") + "." + type(_).__name__'},
+        if expression:
+            msg_id = self._client.execute(
+                f"_={expression}",
+                store_history=False,
+                allow_stdin=False,
+                silent=True,
+                user_expressions={
+                    'm': 'getattr(type(_), "__module__", "") + "." + type(_).__name__'
+                },
             )
             self._suppress_io.add(msg_id)
             self._on_reply.setdefault((msg_id, 'execute_reply'), []).append(self.typename_reply)
-            msg_id = self._client.complete(expression + '.')
-            self._suppress_io.add(msg_id)
-            self._on_reply.setdefault((msg_id, 'complete_reply'), []).append(self.complete_reply)
+            msg_id = self._client.complete(f'{expression}.')
+
+        else:
+            self.typename = ''
+            msg_id = self._client.complete("")
+        self._suppress_io.add(msg_id)
+        self._on_reply.setdefault((msg_id, 'complete_reply'), []).append(self.complete_reply)
 
     def _respond(self, success):
         if self.responded:
@@ -129,7 +131,9 @@ class IntrospectHandler(object):
         if message.content.status != 'ok':
             self._respond(False)
             return
-        self.members = dict((m.rpartition('.')[-1], '') for m in message.content['matches', ()])
+        self.members = {
+            m.rpartition('.')[-1]: '' for m in message.content['matches', ()]
+        }
         omit = [m for m in self.members if m.startswith('__ptvs_repl_')]
         for m in omit:
             del self.members[m]
@@ -167,9 +171,12 @@ class SignaturesHandler(object):
             self._respond(False)
             return
 
-        msg_id = self._client.execute("pass",
-            store_history=False, allow_stdin=False, silent=True,
-            user_expressions={'sigs': '__ptvs_repl_sig(' + expression + ')'},
+        msg_id = self._client.execute(
+            "pass",
+            store_history=False,
+            allow_stdin=False,
+            silent=True,
+            user_expressions={'sigs': f'__ptvs_repl_sig({expression})'},
         )
         self._suppress_io.add(msg_id)
         self._on_reply.setdefault((msg_id, 'execute_reply'), []).append(self.signatures_reply)
@@ -280,7 +287,7 @@ class JupyterClientBackend(ReplBackend):
     def execute_file_ex(self, filetype, filename, args):
         """executes the given filename as a 'script', 'module' or 'process'."""
         if filetype == 'process':
-            command = "!%s %s" % (filename, args)
+            command = f"!{filename} {args}"
         else:
             command = "__ptvs_repl_exec_%s(%r, %r, globals(), locals())" % (filetype, filename, args)
         if self.__client:
@@ -348,18 +355,17 @@ class JupyterClientBackend(ReplBackend):
                     msg_id = m.msg_id
                     msg_type = m.msg_type
 
-                    print('%s: %s' % (msg_type, msg_id))
+                    print(f'{msg_type}: {msg_id}')
 
                     exec_count = m.content['execution_count', None]
                     if exec_count != last_exec_count and exec_count is not None:
                         last_exec_count = exec_count
                         exec_count = int(exec_count) + 1
-                        ps1 = 'In [%s]: ' % exec_count
+                        ps1 = f'In [{exec_count}]: '
                         ps2 = ' ' * (len(ps1) - 5) + '...: '
                         self.send_prompt('\n' + ps1, ps2, allow_multiple_statements=True)
 
-                    parent_id = m.parent_header['msg_id', None]
-                    if parent_id:
+                    if parent_id := m.parent_header['msg_id', None]:
                         on_reply = on_replies.pop((parent_id, msg_type), ())
                         for callable in on_reply:
                             callable(m)
@@ -403,7 +409,7 @@ class JupyterClientBackend(ReplBackend):
                 elif m.msg_type == 'status':
                     self.__status = m.content['execution_state', 'idle']
                 else:
-                    print("Received: " + m.msg_type + ":" + str(m) + "\n")
+                    print(f"Received: {m.msg_type}:{str(m)}" + "\n")
                     self.write_stdout(str(m) + '\n')
 
         except zmq.error.ZMQError:
@@ -420,24 +426,15 @@ class JupyterClientBackend(ReplBackend):
             self.exit_process()
 
     def __write_stream(self, content):
-        if content.name == 'stderr':
-            f = self.write_stderr
-        else:
-            f = self.write_stdout
-        text = content.text
-        if text:
+        f = self.write_stderr if content.name == 'stderr' else self.write_stdout
+        if text := content.text:
             f(text)
 
     def __write_result(self, content, treat_as_error=False):
         exec_count = content['execution_count']
-        if exec_count is not None:
-            prefix = 'Out [%s]: ' % exec_count
-        else:
-            prefix = 'Out: '
-
+        prefix = f'Out [{exec_count}]: ' if exec_count is not None else 'Out: '
         if treat_as_error or content['status'] == 'error':
-            tb = content['traceback']
-            if tb:
+            if tb := content['traceback']:
                 self.write_stderr(prefix + '\n')
                 for line in tb:
                     self.write_stderr(line + '\n')

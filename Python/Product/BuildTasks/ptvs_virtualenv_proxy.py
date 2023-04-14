@@ -38,16 +38,14 @@ else:
 
 def log(txt):
     """Logs fatal errors to a log file if WSGI_LOG env var is defined"""
-    log_file = os.environ.get('WSGI_LOG')
-    if log_file:
+    if log_file := os.environ.get('WSGI_LOG'):
         f = open(log_file, 'a+')
         try:
-            f.write('%s: %s' % (datetime.datetime.now(), txt))
+            f.write(f'{datetime.datetime.now()}: {txt}')
         finally:
             f.close()
 
-ptvsd_secret = os.getenv('WSGI_PTVSD_SECRET')
-if ptvsd_secret:
+if ptvsd_secret := os.getenv('WSGI_PTVSD_SECRET'):
     log('Enabling ptvsd ...\n')
     try:
         import ptvsd
@@ -62,10 +60,10 @@ if ptvsd_secret:
 def get_wsgi_handler(handler_name):
     if not handler_name:
         raise Exception('WSGI_ALT_VIRTUALENV_HANDLER env var must be set')
-    
+
     if not isinstance(handler_name, str):
         handler_name = to_str(handler_name)
-    
+
     module_name, _, callable_name = handler_name.rpartition('.')
     should_call = callable_name.endswith('()')
     callable_name = callable_name[:-2] if should_call else callable_name
@@ -88,11 +86,11 @@ def get_wsgi_handler(handler_name):
             callable_name = callable_name[:-2] if should_call else callable_name
             name_list.insert(0, (callable_name, should_call))
             handler = None
-            last_tb = ': ' + traceback.format_exc()
-    
+            last_tb = f': {traceback.format_exc()}'
+
     if handler is None:
-        raise ValueError('"%s" could not be imported%s' % (handler_name, last_tb))
-    
+        raise ValueError(f'"{handler_name}" could not be imported{last_tb}')
+
     return handler
 
 activate_this = os.getenv('WSGI_ALT_VIRTUALENV_ACTIVATE_THIS')

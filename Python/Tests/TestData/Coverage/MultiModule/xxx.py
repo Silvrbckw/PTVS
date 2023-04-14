@@ -6,21 +6,17 @@ def f():  x = 1
 def g():
     def h():
         return 42
-        
+
     if True:
         print('hi')
     else:
         print('bye')
     x = 2
-    pass
     print(h())
     return x
     
 def func(a, b, c):
-    x = (a + 
-        b +
-        c)
-    return x
+    return a + b + c
 
 class C:
     class D: 

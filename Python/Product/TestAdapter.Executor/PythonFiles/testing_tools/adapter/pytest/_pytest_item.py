@@ -112,12 +112,12 @@ def should_never_reach_here(item, **extra):
     print('and paste the following output there.')
     print()
     for field, info in _summarize_item(item):
-        print('{}: {}'.format(field, info))
+        print(f'{field}: {info}')
     if extra:
         print()
         print('extra info:')
         for name, info in extra.items():
-            print('{:10}'.format(name + ':'), end='')
+            print('{:10}'.format(f'{name}:'), end='')
             if isinstance(info, str):
                 print(info)
             else:
@@ -169,8 +169,11 @@ def parse_item(item, #*,
                 parameterized=parameterized,
                 )
     elif kind == 'doctest':
-        if (testfunc and fullname != testfunc and
-                fullname != '[doctest] ' + testfunc):
+        if (
+            testfunc
+            and fullname != testfunc
+            and fullname != f'[doctest] {testfunc}'
+        ):
             raise should_never_reach_here(
                 item,
                 fullname=fullname,
@@ -235,7 +238,7 @@ def _split_fspath(fspath, fileid, item, #*,
             fileid=fileid,
             )
     testroot = fspath[:-len(fileid) + 1]  # Ignore the "./" prefix.
-    relfile = '.' + fspath[-len(fileid) + 1:]  # Keep the pathsep.
+    relfile = f'.{fspath[-len(fileid) + 1:]}'
     return testroot, relfile
 
 
@@ -277,10 +280,10 @@ def _get_location(item, testroot, relfile, #*,
             srcfile = relfile
         # Otherwise we just return the info from item.location as-is.
 
-        if not srcfile.startswith('.' + _pathsep):
-            srcfile = '.' + _pathsep + srcfile
+        if not srcfile.startswith(f'.{_pathsep}'):
+            srcfile = f'.{_pathsep}{srcfile}'
     # from pytest, line numbers are 0-based
-    location = '{}:{}'.format(srcfile, int(lineno) + 1)
+    location = f'{srcfile}:{int(lineno) + 1}'
     return location, fullname
 
 
@@ -313,9 +316,7 @@ def _is_legacy_wrapper(srcfile, #*,
     """
     if _pyversion > (3,):
         return False
-    if (_pathsep + 'unittest' + _pathsep + 'case.py') not in srcfile:
-        return False
-    return True
+    return f'{_pathsep}unittest{_pathsep}case.py' in srcfile
 
 
 def _unwrap_decorator(func):
@@ -385,7 +386,7 @@ def _parse_node_id(testid, kind, #*,
             # We don't guess how to interpret the node ID for these tests.
             continue
         elif kind == 'suite':
-            fullname = name + '.' + fullname
+            fullname = f'{name}.{fullname}'
         else:
             raise should_never_reach_here(
                 testid,
@@ -406,7 +407,7 @@ def _iter_nodes(testid, kind, #*,
     """Yield (nodeid, name, kind) for the given node ID and its parents."""
     nodeid, testid = _normalize_test_id(testid, kind)
     if len(nodeid) > len(testid):
-        testid = '.' + _pathsep + testid
+        testid = f'.{_pathsep}{testid}'
 
     if kind == 'function' and nodeid.endswith(']'):
         funcid, sep, parameterized = nodeid.partition('[')

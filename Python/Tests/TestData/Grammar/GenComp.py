@@ -1,4 +1,4 @@
-(fob for fob in oar)
+iter(oar)
 (fob for fob in oar if baz)
 (fob for fob in oar for baz in quox)
-baz(fob for fob in oar)
+baz(iter(oar))

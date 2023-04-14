@@ -9,8 +9,9 @@ def loop_forever():
         if i % 10000 == 0: print("Thread {0} [{1}] is making progress.".format(current_thread().name, current_thread().ident))
 
 if __name__ == "__main__":
-    ts = []
-    for i in xrange(num_threads):
-        ts.append(Thread(target=loop_forever, name="Thread-{0}".format(i)))
+    ts = [
+        Thread(target=loop_forever, name="Thread-{0}".format(i))
+        for i in xrange(num_threads)
+    ]
     for t in ts: t.start()
     for t in ts: t.join()

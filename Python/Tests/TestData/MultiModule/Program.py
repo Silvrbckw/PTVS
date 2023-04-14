@@ -5,7 +5,7 @@ class Teacher(MyModule.SchoolMember):
 	def __init__(self,name,age,salary):
 		SchoolMember.__init__(self,name,age)
 		self.salary = salary
-		print ('Initialized Teacher: %s' %self.name)
+		print(f'Initialized Teacher: {self.name}')
 
 	def tell(self):
 		SchoolMember.tell(self)

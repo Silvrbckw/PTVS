@@ -43,7 +43,7 @@ def process(path, style):
     for e in xml.getroot().findall(".//n:img", NS):
         with open(path.parent / e.get('src'), 'rb') as f:
             img = base64.b64encode(f.read()).decode()
-        e.set('src', 'data:image/png;base64,' + img)
+        e.set('src', f'data:image/png;base64,{img}')
 
     xml_str = ET.tostringlist(xml.getroot(), encoding='unicode')
     with open(path.with_suffix('.html'), 'w', encoding='utf-8') as f:

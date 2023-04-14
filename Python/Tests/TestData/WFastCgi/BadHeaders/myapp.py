@@ -5,7 +5,6 @@ def test_1(environment, start_response):
     try:
         start_response('200', [])
         raise Exception
-        yield b'200 OK'
     except:
         # We get to start again as long as no data has been yielded
         start_response('500', [], sys.exc_info())

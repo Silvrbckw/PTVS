@@ -70,29 +70,29 @@ def EnableSkipVerification():
     yield 'Windows Registry Editor Version 5.00'
     yield ''
     for name in ASSEMBLIES:
-        yield '[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\StrongName\Verification\{},B03F5F7F11D50A3A]'.format(name)
+        yield f'[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\StrongName\Verification\{name},B03F5F7F11D50A3A]'
     for name in ASSEMBLIES:
-        yield '[HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Microsoft\StrongName\Verification\{},B03F5F7F11D50A3A]'.format(name)
+        yield f'[HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Microsoft\StrongName\Verification\{name},B03F5F7F11D50A3A]'
 
 def EnableSkipVerificationX86():
     yield 'Windows Registry Editor Version 5.00'
     yield ''
     for name in ASSEMBLIES:
-        yield '[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\StrongName\Verification\{},B03F5F7F11D50A3A]'.format(name)
+        yield f'[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\StrongName\Verification\{name},B03F5F7F11D50A3A]'
 
 def DisableSkipVerification():
     yield 'Windows Registry Editor Version 5.00'
     yield ''
     for name in ASSEMBLIES:
-        yield '[-HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\StrongName\Verification\{},B03F5F7F11D50A3A]'.format(name)
+        yield f'[-HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\StrongName\Verification\{name},B03F5F7F11D50A3A]'
     for name in ASSEMBLIES:
-        yield '[-HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Microsoft\StrongName\Verification\{},B03F5F7F11D50A3A]'.format(name)
+        yield f'[-HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Microsoft\StrongName\Verification\{name},B03F5F7F11D50A3A]'
 
 def DisableSkipVerificationX86():
     yield 'Windows Registry Editor Version 5.00'
     yield ''
     for name in ASSEMBLIES:
-        yield '[-HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\StrongName\Verification\{},B03F5F7F11D50A3A]'.format(name)
+        yield f'[-HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\StrongName\Verification\{name},B03F5F7F11D50A3A]'
 
 FILES = [
     EnableSkipVerification,
@@ -103,6 +103,6 @@ FILES = [
 
 if __name__ == '__main__':
     for file in FILES:
-        with open(file.__name__ + '.reg', 'w', encoding='utf-8') as f:
+        with open(f'{file.__name__}.reg', 'w', encoding='utf-8') as f:
             f.writelines(line + '\n' for line in file())
-        print('Wrote {}.reg'.format(file.__name__))
+        print(f'Wrote {file.__name__}.reg')

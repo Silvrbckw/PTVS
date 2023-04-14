@@ -1,1 +1,1 @@
-print(__file__ + 'abcdef')
+print(f'{__file__}abcdef')

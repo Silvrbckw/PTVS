@@ -1,3 +1,3 @@
 import os
-for x in os.walk('.'):
+for _ in os.walk('.'):
     pass

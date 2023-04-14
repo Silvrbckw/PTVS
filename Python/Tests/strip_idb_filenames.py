@@ -7,6 +7,7 @@ cd to the directory containing the files and then run this script to
 strip the filename fields.
 '''
 
+
 import os
 import pickle
 
@@ -20,4 +21,4 @@ for fname in os.listdir('.'):
         del d['filename']
         with open(fname, 'wb') as f:
             pickle.dump(d, f, 1)
-        print('Processed ' + fname)
+        print(f'Processed {fname}')

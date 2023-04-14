@@ -86,11 +86,11 @@ class SocketIO(object):
         '''
         newline = '\r\n'.encode('ascii')
         while newline not in self.__buffer:
-            temp = self.__socket.recv(1024)
-            if not temp:
-                break
-            self.__buffer += temp
+            if temp := self.__socket.recv(1024):
+                self.__buffer += temp
 
+            else:
+                break
         if not self.__buffer:
             return None
 
@@ -105,11 +105,11 @@ class SocketIO(object):
 
     def _buffered_read_as_utf8(self, length):
         while len(self.__buffer) < length:
-            temp = self.__socket.recv(1024)
-            if not temp:
-                break
-            self.__buffer += temp
+            if temp := self.__socket.recv(1024):
+                self.__buffer += temp
 
+            else:
+                break
         if len(self.__buffer) < length:
             raise InvalidContentError('Expected to read {0} bytes of content, but only read {1} bytes.'.format(length, len(self.__buffer)))
 
@@ -142,11 +142,8 @@ class SocketIO(object):
                 length = int(length_text)
             except ValueError:
                 raise InvalidHeaderError("Invalid Content-Length: {0}".format(length_text))
-        except NameError:
+        except (NameError, KeyError):
             raise InvalidHeaderError('Content-Length not specified in headers')
-        except KeyError:
-            raise InvalidHeaderError('Content-Length not specified in headers')
-
         if length < 0 or length > 2147483647:
             raise InvalidHeaderError("Invalid Content-Length: {0}".format(length))
 
@@ -275,7 +272,7 @@ class IpcChannel(object):
 
         cmd = request.get('command', '')
         args = request.get('arguments', {})
-        target = getattr(self, 'on_' + cmd, self.on_invalid_request)
+        target = getattr(self, f'on_{cmd}', self.on_invalid_request)
         try:
             _trace('Calling ', repr(target))
             target(request, args)

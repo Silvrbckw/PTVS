@@ -43,12 +43,9 @@ def new_thread_wrapper(func, posargs, kwargs):
         pyprofdll.CloseThread(handle)
 
 def start_new_thread(func, args, kwargs = {}, *extra_args):
-    if not isinstance(args, tuple):
-        # args is not a tuple. This may be because we have become bound to a
-        # class, which has offset our arguments by one.
-        if isinstance(kwargs, tuple):
-            func, args = args, kwargs
-            kwargs = extra_args[0] if len(extra_args) > 0 else {}
+    if not isinstance(args, tuple) and isinstance(kwargs, tuple):
+        func, args = args, kwargs
+        kwargs = extra_args[0] if extra_args else {}
 
     return _start_new_thread(new_thread_wrapper, (func, args, kwargs))
 
@@ -71,7 +68,9 @@ def profile(file, globals_obj, locals_obj, profdll):
 
     profiler = pyprofdll.CreateProfiler(ctypes.c_void_p(sys.dllhandle))
     if not profiler:
-        raise NotImplementedError("Profiling is currently not supported for " + sys.version)
+        raise NotImplementedError(
+            f"Profiling is currently not supported for {sys.version}"
+        )
     handle = None
 
     try:

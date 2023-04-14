@@ -20,6 +20,7 @@ to start as first argument and directory to run from as
 the second argument.
 """
 
+
 __author__ = "Microsoft Corporation <ptvshelp@microsoft.com>"
 __version__ = "3.2.0.0"
 
@@ -43,9 +44,9 @@ os.chdir(sys.argv[1])
 
 port_num = int(sys.argv[2])
 debug_id = sys.argv[3]
-debug_options = set([opt.strip() for opt in sys.argv[4].split(',')])
+debug_options = {opt.strip() for opt in sys.argv[4].split(',')}
 
-del sys.argv[0:5]
+del sys.argv[:5]
 
 # Use bundled ptvsd or not?
 bundled_ptvsd = True

@@ -1,8 +1,6 @@
-yield from 1
 
 def f():
     return 42
-    yield from 1
 
 def f():
     yield from 1

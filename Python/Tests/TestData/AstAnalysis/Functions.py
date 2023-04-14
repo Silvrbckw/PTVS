@@ -1,6 +1,5 @@
 def f():
     '''f'''
-    pass
     def f1(): pass
 
 f2 = f

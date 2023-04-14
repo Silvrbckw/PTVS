@@ -3,4 +3,3 @@ def f():
     yield 2
 
 a = f()
-pass
