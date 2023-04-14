@@ -65,9 +65,7 @@ PATH_JOIN = _os_path.join
 def fix_path(path, #*,
              _pathsep=PATH_SEP):
     """Return a platform-appropriate path for the given path."""
-    if not path:
-        return '.'
-    return path.replace('/', _pathsep)
+    return path.replace('/', _pathsep) if path else '.'
 
 
 def fix_relpath(path, #*,
@@ -79,9 +77,8 @@ def fix_relpath(path, #*,
     path = _fix_path(path)
     if path in ('.', '..'):
         return path
-    if not _path_isabs(path):
-        if not path.startswith('.' + _pathsep):
-            path = '.' + _pathsep + path
+    if not _path_isabs(path) and not path.startswith(f'.{_pathsep}'):
+        path = f'.{_pathsep}{path}'
     return path
 
 
@@ -109,9 +106,7 @@ def _resolve_relpath(path, rootdir=None, #*,
     if not rootdir.endswith(_pathsep):
         rootdir += _pathsep
 
-    if not _normcase(path).startswith(rootdir):
-        return None
-    return path[len(rootdir):]
+    return path[len(rootdir):] if _normcase(path).startswith(rootdir) else None
 
 
 def fix_fileid(fileid, rootdir=None, #*,
@@ -135,12 +130,10 @@ def fix_fileid(fileid, rootdir=None, #*,
     # from pytest use "/" as the path separator by default.
     _fileid = fileid.replace(_pathsep, '/')
 
-    relpath = _resolve_relpath(_fileid, rootdir,
-                               _pathsep=_pathsep,
-                               **kwargs
-                               )
-    if relpath:  # Note that we treat "" here as an absolute path.
-        _fileid = './' + relpath
+    if relpath := _resolve_relpath(
+        _fileid, rootdir, _pathsep=_pathsep, **kwargs
+    ):
+        _fileid = f'./{relpath}'
 
     if normalize:
         if strictpathsep:

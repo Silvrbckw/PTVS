@@ -20,5 +20,5 @@ def f():
     fob = 2
 
 class X:
-    def f(x):
+    def f(self):
         nonlocal __class__

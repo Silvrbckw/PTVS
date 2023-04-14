@@ -329,7 +329,7 @@ class SafeRepr(object):
     
     def _repr_iter(self, obj, level, prefix, suffix, comma_after_single_element = False):
         yield prefix
-        
+
         if level >= len(self.maxcollection):
             yield '...'
         else:
@@ -339,14 +339,13 @@ class SafeRepr(object):
                 if yield_comma:
                     yield ', '
                 yield_comma = True
-                
+
                 count -= 1
                 if count <= 0:
                     yield '...'
                     break
 
-                for p in self._repr(item, 100 if item is obj else level + 1):
-                    yield p
+                yield from self._repr(item, 100 if item is obj else level + 1)
             else:
                 if comma_after_single_element and count == self.maxcollection[level] - 1:
                     yield ','
@@ -354,10 +353,10 @@ class SafeRepr(object):
 
     def _repr_long_iter(self, obj):
         try:
-            obj_repr = '<%s, len() = %s>' % (type(obj).__name__, len(obj))
+            obj_repr = f'<{type(obj).__name__}, len() = {len(obj)}>'
         except:
             try:
-                obj_repr = '<' + type(obj).__name__ + '>'
+                obj_repr = f'<{type(obj).__name__}>'
             except:
                 obj_repr = '<no repr available for object>'
         yield obj_repr
@@ -367,33 +366,31 @@ class SafeRepr(object):
             yield prefix + suffix
             return
         if level >= len(self.maxcollection):
-            yield prefix + '...' + suffix
+            yield f'{prefix}...{suffix}'
             return
-        
+
         yield prefix
-        
+
         count = self.maxcollection[level]
         yield_comma = False
-        
+
         try:
             sorted_keys = sorted(obj)
         except Exception:
             sorted_keys = list(obj)
-        
+
         for key in sorted_keys:
             if yield_comma:
                 yield ', '
             yield_comma = True
-            
+
             count -= 1
             if count <= 0:
                 yield '...'
                 break
-            
-            yield item_prefix
-            for p in self._repr(key, level + 1):
-                yield p
 
+            yield item_prefix
+            yield from self._repr(key, level + 1)
             yield item_sep
 
             try:
@@ -401,10 +398,9 @@ class SafeRepr(object):
             except Exception:
                 yield '<?>'
             else:
-                for p in self._repr(item, 100 if item is obj else level + 1):
-                    yield p
+                yield from self._repr(item, 100 if item is obj else level + 1)
             yield item_suffix
-        
+
         yield suffix
 
     def _repr_str(self, obj, level):
@@ -421,21 +417,21 @@ class SafeRepr(object):
                 obj_repr = object.__repr__(obj)
             except:
                 try:
-                    obj_repr = '<no repr available for ' + type(obj).__name__ + '>'
+                    obj_repr = f'<no repr available for {type(obj).__name__}>'
                 except:
                     obj_repr = '<no repr available for object>'
-        
+
         limit = limit_inner if level > 0 else limit_outer
-        
+
         if limit >= len(obj_repr):
             yield obj_repr
             return
-        
+
         # Slightly imprecise calculations - we may end up with a string that is
         # up to 3 characters longer than limit. If you need precise formatting,
         # you are using the wrong class.
         left_count, right_count = max(1, int(2 * limit / 3)), max(1, int(limit / 3))
-        
+
         yield obj_repr[:left_count]
         yield '...'
         yield obj_repr[-right_count:]
@@ -450,7 +446,7 @@ class SafeRepr(object):
             tests.append((self.maxstring_outer + 4, self.maxstring_inner + 4 + 2, bytes('A', 'ascii') * (self.maxstring_outer + 10)))
         else:
             tests.append((self.maxstring_outer + 4, self.maxstring_inner + 4 + 2, unicode('A') * (self.maxstring_outer + 10)))
-        
+
         for limit1, limit2, value in tests:
             assert len(self(value)) <= limit1 <= len(repr(value)), (len(self(value)), limit1, len(repr(value)), value)
             assert len(self([value])) <= limit2 <= len(repr([value])), (len(self([value])), limit2, len(repr([value])), self([value]))
@@ -458,29 +454,26 @@ class SafeRepr(object):
         def test(source, expected):
             actual = self(source)
             if actual != expected:
-                print("Source " + repr(source))
-                print("Expect " + expected)
-                print("Actual " + actual)
+                print(f"Source {repr(source)}")
+                print(f"Expect {expected}")
+                print(f"Actual {actual}")
                 print("")
                 assert False
-        
+
         def re_test(source, pattern):
             import re
             actual = self(source)
             if not re.match(pattern, actual):
-                print("Source  " + repr(source))
-                print("Pattern " + pattern)
-                print("Actual  " + actual)
+                print(f"Source  {repr(source)}")
+                print(f"Pattern {pattern}")
+                print(f"Actual  {actual}")
                 print("")
                 assert False
-        
+
         for ctype, _prefix, _suffix, comma in self.collection_types:
             for i in range(len(self.maxcollection)):
                 prefix = _prefix * (i + 1)
-                if comma:
-                    suffix = _suffix + ("," + _suffix) * i
-                else:
-                    suffix = _suffix * (i + 1)
+                suffix = _suffix + f",{_suffix}" * i if comma else _suffix * (i + 1)
                 #print("ctype = " + ctype.__name__ + ", maxcollection[" + str(i) + "] == " + str(self.maxcollection[i]))
                 c1 = ctype(range(self.maxcollection[i] - 1))
                 inner_repr = prefix + ', '.join(str(j) for j in c1)
@@ -489,8 +482,8 @@ class SafeRepr(object):
                 for j in range(i):
                     c1, c2, c3 = ctype((c1,)), ctype((c2,)), ctype((c3,))
                 test(c1, inner_repr + suffix)
-                test(c2, inner_repr + ", ..." + suffix)
-                test(c3, inner_repr + ", ..." + suffix)
+                test(c2, f"{inner_repr}, ...{suffix}")
+                test(c3, f"{inner_repr}, ...{suffix}")
 
                 if ctype is set:
                     # Cannot recursively add sets to sets
@@ -541,7 +534,6 @@ class SafeRepr(object):
                 pass
             self(d1)
 
-        # Test with objects with broken repr implementations
         class TestClass(object):
             def __repr__(self):
                 raise NameError
@@ -552,20 +544,17 @@ class SafeRepr(object):
             pass
         self(TestClass())
 
-        # Test with objects with long repr implementations
         class TestClass(object):
             repr_str = '<' + 'A' * self.maxother_outer * 2 + '>'
             def __repr__(self):
                 return self.repr_str
         re_test(TestClass(), r'\<A+\.\.\.A+\>')
 
-        # Test collections that don't override repr
         class TestClass(dict): pass
         test(TestClass(), '{}')
         class TestClass(list): pass
         test(TestClass(), '[]')
 
-        # Test collections that override repr
         class TestClass(dict):
             def __repr__(self): return 'MyRepr'
         test(TestClass(), 'MyRepr')
@@ -585,11 +574,11 @@ class SafeRepr(object):
         test(TestClass(['a' * (self.maxstring_inner + 1)]), '<TestClass, len() = 1>')
 
         # Test range
-        if sys.version[0] == '2':
-            range_name = 'xrange'
-        else:
-            range_name = 'range'
-        test(xrange(1, self.maxcollection[0] + 1), '%s(1, %s)' % (range_name, self.maxcollection[0] + 1))
+        range_name = 'xrange' if sys.version[0] == '2' else 'range'
+        test(
+            xrange(1, self.maxcollection[0] + 1),
+            f'{range_name}(1, {self.maxcollection[0] + 1})',
+        )
 
         # Test directly recursive collections
         c1 = [1, 2]

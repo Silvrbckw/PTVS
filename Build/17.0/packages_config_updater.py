@@ -72,20 +72,21 @@ def get_latest_package_version(package_id):
             if (len(hasVersion)):
                 hasVersion.sort(reverse=True)
                 return hasVersion[0].split(' ')[1]
-        
-        if (len(matches) > 0):
+
+        if matches:
             return matches[0].split(' ')[1]
-        
+
     raise Exception("Nuget not found or could not find a match")
 
 def main():
-    show_update_comment = False #if true, it will put comments in the output file stating the packages that were updated
-    if input("Show comments in output file (type 1 for true and 0 for false): ") == "1":
-        show_update_comment = True
-
+    show_update_comment = (
+        input(
+            "Show comments in output file (type 1 for true and 0 for false): "
+        )
+        == "1"
+    )
     with open(ORIGINAL_PACKAGE_CONFIG_FILE, 'r') as f:
-        for line in f.readlines():
-
+        for line in f:
             try:
                 line = line.strip()
                 print("Input: \"" + line.strip() + "\"")
@@ -106,17 +107,17 @@ def main():
 
     #Printing the results
     for package in IGNORE_PACKAGES:
-        print("Ignored package: " + package + "\n")
+        print(f"Ignored package: {package}" + "\n")
 
     with open(NEW_PACKAGE_CONFIG_FILE, 'w') as file_handle:
         for item in NEW_CONFIG_FILE_OUTPUT:
             if item.strip().startswith("<package id="):
-                item = "  " + item
+                item = f"  {item}"
 
             file_handle.write(item + "\n")
 
     print("\n\n")
-    print("Results have been written to: " + NEW_PACKAGE_CONFIG_FILE)
+    print(f"Results have been written to: {NEW_PACKAGE_CONFIG_FILE}")
     print("\n")
     print("-------------------------------------- Finished Exeucuting --------------------------------------")
 

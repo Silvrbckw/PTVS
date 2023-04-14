@@ -49,40 +49,47 @@ else:
         from urllib import urlretrieve
 
 def install_from_source_file(name, tar_file, temp_dir):
-        package = tarfile.open(tar_file)
-        try:
-            safe_members = [m for m in package.getmembers() if not m.name.startswith(('..', '\\'))]
-            package.extractall(temp_dir, members=safe_members)
-        finally:
-            package.close()
+    package = tarfile.open(tar_file)
+    try:
+        safe_members = [m for m in package.getmembers() if not m.name.startswith(('..', '\\'))]
+        package.extractall(temp_dir, members=safe_members)
+    finally:
+        package.close()
 
-        extracted_dirs = [d for d in os.listdir(temp_dir) if os.path.isfile(os.path.join(temp_dir, d, 'setup.py'))]
-        if not extracted_dirs:
-            raise OSError("Failed to find " + name + "'s setup.py")
-        extracted_dir = extracted_dirs[0]
+    extracted_dirs = [d for d in os.listdir(temp_dir) if os.path.isfile(os.path.join(temp_dir, d, 'setup.py'))]
+    if not extracted_dirs:
+        raise OSError(f"Failed to find {name}'s setup.py")
+    extracted_dir = extracted_dirs[0]
 
-        print('\nInstalling from ' + extracted_dir)
-        sys.stdout.flush()
-        cwd = os.getcwd()
-        try:
-            os.chdir(os.path.join(temp_dir, extracted_dir))
-            subprocess.check_call(
-                EXECUTABLE + ['setup.py', 'install', '--single-version-externally-managed', '--record', name + '.txt']
-            )
-        finally:
-            os.chdir(cwd)
+    print('\nInstalling from ' + extracted_dir)
+    sys.stdout.flush()
+    cwd = os.getcwd()
+    try:
+        os.chdir(os.path.join(temp_dir, extracted_dir))
+        subprocess.check_call(
+            EXECUTABLE
+            + [
+                'setup.py',
+                'install',
+                '--single-version-externally-managed',
+                '--record',
+                f'{name}.txt',
+            ]
+        )
+    finally:
+        os.chdir(cwd)
 
 def install_from_local_source():
     cwd = os.getcwd()
     setuptools_package = os.path.join(cwd, 'setuptools.tar.gz')
     pip_package = os.path.join(cwd, 'pip.tar.gz')
     if not os.path.isfile(setuptools_package):
-        print('Did not find ' + setuptools_package)
+        print(f'Did not find {setuptools_package}')
         raise ValueError('setuptools.tar.gz not found')
     if not os.path.isfile(pip_package):
-        print('Did not find ' + pip_package)
+        print(f'Did not find {pip_package}')
         raise ValueError('pip.tar.gz not found')
-    
+
     setuptools_temp_dir = tempfile.mkdtemp('-setuptools', 'ptvs-')
     pip_temp_dir = tempfile.mkdtemp('-pip', 'ptvs-')
 
@@ -104,14 +111,14 @@ def install_from_source(setuptools_source, pip_source):
 
     try:
         os.chdir(setuptools_temp_dir)
-        print('Downloading setuptools from ' + setuptools_source)
+        print(f'Downloading setuptools from {setuptools_source}')
         sys.stdout.flush()
         setuptools_package, _ = urlretrieve(setuptools_source, 'setuptools.tar.gz')
 
         install_from_source_file('setuptools', setuptools_package, setuptools_temp_dir)
 
         os.chdir(pip_temp_dir)
-        print('Downloading pip from ' + pip_source)
+        print(f'Downloading pip from {pip_source}')
         sys.stdout.flush()
         pip_package, _ = urlretrieve(pip_source, 'pip.tar.gz')
 
@@ -128,7 +135,7 @@ def install_from_pip(getpip_url):
     pip_temp_dir = tempfile.mkdtemp('-pip', 'ptvs-')
 
     try:
-        print('Downloading pip from ' + getpip_url)
+        print(f'Downloading pip from {getpip_url}')
         sys.stdout.flush()
         pip_script, _ = urlretrieve(getpip_url, os.path.join(pip_temp_dir, 'get-pip.py'))
 

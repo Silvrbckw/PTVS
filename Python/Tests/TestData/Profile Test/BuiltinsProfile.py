@@ -5,7 +5,7 @@ import array
 def f():
 	a = 'abc'
 	x = array.array('b')
-	for i in range(10000):
+	for _ in range(10000):
 		a.startswith('a')		# instance method, in __builtin__ 
 		isinstance('', str)		# static method, in __builtin__
 		x.tostring()			# instance method, in module

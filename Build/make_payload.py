@@ -6,6 +6,7 @@ Usage:
 
 '''
 
+
 __author__ = 'Steve Dower <steve.dower@microsoft.com>'
 __version__ = '0.1'
 
@@ -39,12 +40,9 @@ for u in sys.argv[1:]:
     f_len = 0
     f_hash = hashlib.sha256()
     with open(p, 'rb') as f:
-        data = f.read(1024 * 1024)
-        while data:
+        while data := f.read(1024 * 1024):
             f_len += len(data)
             f_hash.update(data)
-            data = f.read(1024 * 1024)
-
     if is_temp:
         try:
             os.unlink(p)

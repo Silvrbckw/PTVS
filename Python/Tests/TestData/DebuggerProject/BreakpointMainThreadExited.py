@@ -3,7 +3,7 @@ import time
 
 class ThreadFirst(Thread):
     def run(self):
-        for i in range(5):
+        for _ in range(5):
             time.sleep(1)
             print('hi')
 

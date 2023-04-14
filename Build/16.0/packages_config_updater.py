@@ -44,7 +44,9 @@ def process_latest_version(package_id, old_version, new_version, show_update_com
 
 def process_package(line, package_id, version, show_update_comment):
     if package_id.startswith("Microsoft.") and (package_id not in IGNORE_PACKAGES):
-        latest_version = get_latest_package_version(url=("https://www.nuget.org/packages/" + package_id))
+        latest_version = get_latest_package_version(
+            url=f"https://www.nuget.org/packages/{package_id}"
+        )
         process_latest_version(package_id=package_id, old_version=version, new_version=latest_version, show_update_comment=show_update_comment)
 
     else:
@@ -56,17 +58,17 @@ def get_latest_package_version(url):
     xml_tree = html.fromstring(html_page.content)
     version_elements = xml_tree.xpath('//div[@class="version-history panel-collapse collapse in"]/table/tbody[@class="no-border"]/tr/td/a')
 
-    version = version_elements[0].attrib["title"]
-    return version
+    return version_elements[0].attrib["title"]
 
 def main():
-    show_update_comment = False #if true, it will put comments in the output file stating the packages that were updated
-    if input("Show comments in output file (type 1 for true and 0 for false): ") == "1":
-        show_update_comment = True
-
+    show_update_comment = (
+        input(
+            "Show comments in output file (type 1 for true and 0 for false): "
+        )
+        == "1"
+    )
     with open(ORIGINAL_PACKAGE_CONFIG_FILE, 'r') as f:
-        for line in f.readlines():
-
+        for line in f:
             try:
                 line = line.strip()
                 print("Input: \"" + line.strip() + "\"")
@@ -87,17 +89,17 @@ def main():
 
     #Printing the results
     for package in IGNORE_PACKAGES:
-        print("Ignored package: " + package + "\n")
+        print(f"Ignored package: {package}" + "\n")
 
     with open(NEW_PACKAGE_CONFIG_FILE, 'w') as file_handle:
         for item in NEW_CONFIG_FILE_OUTPUT:
             if item.strip().startswith("<package id="):
-                item = "  " + item
+                item = f"  {item}"
 
             file_handle.write(item + "\n")
 
     print("\n\n")
-    print("Results have been written to: " + NEW_PACKAGE_CONFIG_FILE)
+    print(f"Results have been written to: {NEW_PACKAGE_CONFIG_FILE}")
     print("\n")
     print("-------------------------------------- Finished Exeucuting --------------------------------------")
 

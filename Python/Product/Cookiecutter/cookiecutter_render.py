@@ -71,7 +71,7 @@ def render_context(context, output_folder_path):
                 # We are dealing with a regular variable
                 val = render_variable(env, raw, cookiecutter_dict)
         except UndefinedError as err:
-            msg = "Unable to render variable '{}'".format(key)
+            msg = f"Unable to render variable '{key}'"
             raise UndefinedVariableInTemplate(msg, err, context)
 
         cookiecutter_dict[key] = val

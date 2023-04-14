@@ -50,7 +50,7 @@ def load_debugger(secret, port, mixed_mode):
             import ptvsd
             from ptvsd.debugger import DONT_DEBUG, DEBUG_ENTRYPOINTS, get_code
             from ptvsd import enable_attach, wait_for_attach
-            
+
             DONT_DEBUG.append(os.path.normcase(__file__))
             DEBUG_ENTRYPOINTS.add(get_code(main))
             enable_attach(secret, ('127.0.0.1', port), redirect_output = True)
@@ -66,18 +66,14 @@ def load_debugger(secret, port, mixed_mode):
             # so we have to use Win32 API in a loop to do the same thing.
             from time import sleep
             from ctypes import windll, c_char
-            while True:
-                if windll.kernel32.IsDebuggerPresent() != 0:
-                    break
+            while windll.kernel32.IsDebuggerPresent() == 0:
                 sleep(0.1)
             try:
                 debugger_helper = windll['Microsoft.PythonTools.Debugger.Helper.x86.dll']
             except WindowsError:
                 debugger_helper = windll['Microsoft.PythonTools.Debugger.Helper.x64.dll']
             isTracing = c_char.in_dll(debugger_helper, "isTracing")
-            while True:
-                if isTracing.value != 0:
-                    break
+            while isTracing.value == 0:
                 sleep(0.1)
 
     except:
@@ -124,11 +120,10 @@ def run(testRunner, coverage_file, test_file, args):
             nose.run(argv=args)
         sys.exit(0)
     finally:
-        pass
         if cov is not None:
             cov.stop()
             cov.save()
-            cov.xml_report(outfile = coverage_file + '.xml', omit=__file__)
+            cov.xml_report(outfile=f'{coverage_file}.xml', omit=__file__)
 
 #note: this must match adapter\pytest\_discovery.py
 def patch_translate_non_printable():
@@ -162,18 +157,14 @@ class TestCollector(object):
 
     def patch_collect_test_notfound(self, collector):
         originalCollect = getattr(collector, "collect")
-       
+
         if not originalCollect:
             print("ERROR: failed to patch pytest, collector.collect")
-            pass
-            
         # Fix for RunAll in VS, when a single parameterized test isn't found
         # Wrap the actual collect() call and clear any _notfound errors to prevent exceptions which skips remaining tests to run
         # We still print the same errors to the user
         def collectwapper():
-            for item in originalCollect():
-                yield item
-           
+            yield from originalCollect()
             notfound = getattr(collector, '_notfound', [])
             if notfound:
                   for arg, exc in notfound: 

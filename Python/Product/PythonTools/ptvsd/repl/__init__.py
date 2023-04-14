@@ -117,9 +117,8 @@ def _command_line_to_args_list(cmdline):
         lf.argtypes = [c_voidp]
 
         pNumArgs = c_int()
-        r = clta(cmdline, byref(pNumArgs))
-        if r:
-            for index in range(0, pNumArgs.value):
+        if r := clta(cmdline, byref(pNumArgs)):
+            for index in range(pNumArgs.value):
                 if sys.hexversion >= 0x030000F0:
                     argval = r[index]
                 else:
@@ -187,21 +186,15 @@ actual inspection and introspection."""
     def _repl_loop(self):
         """loop on created thread which processes communicates with the REPL window"""    
         try:
-            while True: 
-                if self.check_for_exit_repl_loop():
-                    break
-
+            while not self.check_for_exit_repl_loop():
                 # we receive a series of 4 byte commands.  Each command then
                 # has it's own format which we must parse before continuing to
                 # the next command.
-                self.flush()                
+                self.flush()
                 self.conn.settimeout(10)
 
                 # 2.x raises SSLError in case of timeout (http://bugs.python.org/issue10272)
-                if SSLError:
-                    timeout_exc_types = (socket.timeout, SSLError)
-                else:
-                    timeout_exc_types = socket.timeout
+                timeout_exc_types = (socket.timeout, SSLError) if SSLError else socket.timeout
                 try:
                     inp = read_bytes(self.conn, 4)
                 except timeout_exc_types: 
@@ -304,13 +297,13 @@ actual inspection and introspection."""
                 arg_count = len(args) + (vargs is not None) + (varkw is not None)
                 write_int(self.conn, arg_count)
 
-                def_values = [''] * (len(args) - len(defaults)) + ['=' + d for d in defaults]
+                def_values = [''] * (len(args) - len(defaults)) + [f'={d}' for d in defaults]
                 for arg, def_value in zip(args, def_values):
                     write_string(self.conn, (arg or '') + def_value)
                 if vargs is not None:
-                    write_string(self.conn, '*' + vargs)
+                    write_string(self.conn, f'*{vargs}')
                 if varkw is not None:
-                    write_string(self.conn, '**' + varkw)
+                    write_string(self.conn, f'**{varkw}')
 
     def _send_serr(self):
         with self.send_lock:
@@ -552,19 +545,18 @@ class BasicReplBackend(ReplBackend):
     def __init__(self, mod_name='__main__'):
         import threading
         ReplBackend.__init__(self)
-        if mod_name is not None:
-            if sys.platform == 'cli':
-                self.exec_mod = Scope()
-                self.exec_mod.__name__ = '__main__'
-            else:
-                self.exec_mod = imp.new_module(mod_name)
-                # On 2.6, the below messes up the globals of the calling script
-                # if it is in sys.modules of the same name.
-                if sys.version_info >= (2, 7):
-                    sys.modules[mod_name] = self.exec_mod
-        else:
+        if mod_name is None:
             self.exec_mod = sys.modules['__main__']
 
+        elif sys.platform == 'cli':
+            self.exec_mod = Scope()
+            self.exec_mod.__name__ = '__main__'
+        else:
+            self.exec_mod = imp.new_module(mod_name)
+            # On 2.6, the below messes up the globals of the calling script
+            # if it is in sys.modules of the same name.
+            if sys.version_info >= (2, 7):
+                sys.modules[mod_name] = self.exec_mod
         self.code_flags = 0
         self.execute_item = None
         self.execute_item_lock = threading.Lock()
@@ -622,9 +614,8 @@ due to the exec, so we do it here"""
         return func
 
     def execute_code_work_item(self):
-        _debug_write('Executing: ' + repr(self.current_code))
-        stripped_code = self.current_code.strip()
-        if stripped_code:
+        _debug_write(f'Executing: {repr(self.current_code)}')
+        if stripped_code := self.current_code.strip():
             if sys.platform == 'cli':
                 code_to_send = ''
                 for line in stripped_code.split('\n'):
@@ -774,7 +765,7 @@ due to the exec, so we do it here"""
             out_codec = codecs.lookup(sys.stdout.encoding)
 
             proc = Popen(
-                '"%s" %s' % (self.current_code, self.current_args),
+                f'"{self.current_code}" {self.current_args}',
                 stdout=PIPE,
                 stderr=STDOUT,
                 bufsize=0,
@@ -793,7 +784,7 @@ due to the exec, so we do it here"""
     def execute_file_ex(self, filetype, filename, args):
         self.current_code = filename
         self.current_args = args
-        self.execute_item = getattr(self, 'execute_%s_work_item' % filetype, None)
+        self.execute_item = getattr(self, f'execute_{filetype}_work_item', None)
         self.execute_item_lock.release()
 
     def interrupt_main(self):
@@ -817,22 +808,22 @@ due to the exec, so we do it here"""
         """returns a tuple of the type name, instance members, and type members"""
         getattr_func = getattr
         if not expression:
-            all_members = {}
             if sys.platform == 'cli':
                 code = python_context.CreateSnippet('vars()', None, SourceCodeKind.AutoDetect)
                 items = code.Execute(self.exec_mod)
             else:
                 items = self.exec_mod.__dict__
 
-            for key, value in items.items():
-                all_members[key] = self.get_type_name(value)
+            all_members = {key: self.get_type_name(value) for key, value in items.items()}
             return '', all_members, {}
         else:
             if sys.platform == 'cli':
                 code = python_context.CreateSnippet(expression, None, SourceCodeKind.AutoDetect)
                 val = code.Execute(self.exec_mod)
 
-                code = python_context.CreateSnippet('dir(' + expression + ')', None, SourceCodeKind.AutoDetect)
+                code = python_context.CreateSnippet(
+                    f'dir({expression})', None, SourceCodeKind.AutoDetect
+                )
                 members = code.Execute(self.exec_mod)
 
                 code = python_context.CreateSnippet('lambda value, name: getattr(value, name)', None, SourceCodeKind.AutoDetect)
@@ -867,7 +858,7 @@ due to the exec, so we do it here"""
                     type_members[mem_name] = mem_t
 
 
-        return t.__module__ + '.' + t.__name__, inst_members, type_members
+        return f'{t.__module__}.{t.__name__}', inst_members, type_members
 
     def get_ipy_sig(self, obj, ctor):
         args = []
@@ -899,7 +890,7 @@ due to the exec, so we do it here"""
     def collect_signatures(self, val):
         doc = val.__doc__
         type_obj = None
-        if isinstance(val, type) or isinstance(val, _OldClassType):
+        if isinstance(val, (type, _OldClassType)):
             type_obj = val
             val = val.__init__
 
@@ -927,22 +918,19 @@ due to the exec, so we do it here"""
             # remove self for instance methods and types
             args = args[1:]
 
-        if defaults is not None:
-            defaults = [repr(default) for default in defaults]
-        else:
-            defaults = []
+        defaults = [] if defaults is None else [repr(default) for default in defaults]
         return [(doc, args, vargs, varkw, defaults)]
 
     def set_current_module(self, module):
         mod = sys.modules.get(module)
         if mod is not None:
-            _debug_write('Setting module to ' + module)
+            _debug_write(f'Setting module to {module}')
             if sys.platform == 'cli':
                 self.exec_mod = clr.GetClrType(type(sys)).GetProperty('Scope', System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(sys, ())
             else:
                 self.exec_mod = mod
         elif module:
-            _debug_write('Unknown module ' + module)
+            _debug_write(f'Unknown module {module}')
 
     def get_module_names(self):
         return get_module_names()
@@ -954,8 +942,7 @@ due to the exec, so we do it here"""
     def get_type_name(val):
         try:
             mem_t = type(val)
-            mem_t_name = mem_t.__module__ + '.' + mem_t.__name__
-            return mem_t_name
+            return f'{mem_t.__module__}.{mem_t.__name__}'
         except:
             pass                
 
@@ -968,8 +955,7 @@ due to the exec, so we do it here"""
                 val = getattr_func(inst.__class__, name)
             else:
                 val = getattr_func(type(inst), name)
-            mem_t_name = BasicReplBackend.get_type_name(val)
-            return mem_t_name
+            return BasicReplBackend.get_type_name(val)
         except:
             if not from_dict:
                 try:
@@ -1015,7 +1001,7 @@ def get_namespaces(basename, namespace, names):
     names.append((basename, ''))
     try:
         for name in dir(namespace):
-            new_name = basename + '.' + name
+            new_name = f'{basename}.{name}'
             new_namespace = getattr(namespace, name)
 
             if type(new_namespace) is NamespaceType:
@@ -1220,7 +1206,7 @@ class _ReplOutput(object):
             self.write('\n')
 
     def write(self, value):
-        _debug_write('printing ' + repr(value) + '\n')
+        _debug_write(f'printing {repr(value)}' + '\n')
         if self.is_stdout:
             self.backend.write_stdout(value)
         else:
@@ -1287,31 +1273,31 @@ if sys.platform == 'cli':
             if self.old_out:
                 self.old_out.Write(value, *args)
 
-            if not args:
-                if type(value) is str or type(value) is System.Char:
-                    if self.is_stdout:
-                        self.backend.write_stdout(str(value).replace('\r\n', '\n'))
-                    else:
-                        self.backend.write_stderr(str(value).replace('\r\n', '\n'))
-                else:
-                    super(DotNetOutput, self).Write.Overloads[object](value)
-            else:
+            if args:
                 self.Write(System.String.Format(value, *args))
+
+            elif type(value) is str or type(value) is System.Char:
+                if self.is_stdout:
+                    self.backend.write_stdout(str(value).replace('\r\n', '\n'))
+                else:
+                    self.backend.write_stderr(str(value).replace('\r\n', '\n'))
+            else:
+                super(DotNetOutput, self).Write.Overloads[object](value)
 
         def WriteLine(self, value, *args):
             if self.old_out:
                 self.old_out.WriteLine(value, *args)
 
-            if not args:
-                if type(value) is str or type(value) is System.Char:
-                    if self.is_stdout:
-                        self.backend.write_stdout(str(value).replace('\r\n', '\n') + '\n')
-                    else:
-                        self.backend.write_stderr(str(value).replace('\r\n', '\n') + '\n')
-                else:
-                    super(DotNetOutput, self).WriteLine.Overloads[object](value)
-            else:
+            if args:
                 self.WriteLine(System.String.Format(value, *args))
+
+            elif type(value) is str or type(value) is System.Char:
+                if self.is_stdout:
+                    self.backend.write_stdout(str(value).replace('\r\n', '\n') + '\n')
+                else:
+                    self.backend.write_stderr(str(value).replace('\r\n', '\n') + '\n')
+            else:
+                super(DotNetOutput, self).WriteLine.Overloads[object](value)
 
         @property
         def Encoding(self):

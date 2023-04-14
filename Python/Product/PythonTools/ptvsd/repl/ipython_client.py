@@ -16,6 +16,7 @@
 
 """Implements REPL support over IPython/ZMQ for VisualStudio"""
 
+
 __author__ = "Microsoft Corporation <ptvshelp@microsoft.com>"
 __version__ = "3.2.1.0"
 
@@ -37,12 +38,13 @@ try:
     import IPython
 except ImportError:
     exc_value = sys.exc_info()[1]
-    raise UnsupportedReplException('IPython mode requires IPython 0.11 or later: ' + str(exc_value))
+    raise UnsupportedReplException(
+        f'IPython mode requires IPython 0.11 or later: {str(exc_value)}'
+    )
 
 def is_ipython_versionorgreater(major, minor):
     """checks if we are at least a specific IPython version"""
-    match = re.match('(\d+).(\d+)', IPython.__version__)
-    if match:
+    if match := re.match('(\d+).(\d+)', IPython.__version__):
         groups = match.groups()
         if int(groups[0]) > major:
             return True
@@ -89,7 +91,7 @@ except ImportError:
 class DefaultHandler(object):
     def unknown_command(self, content): 
         import pprint
-        print('unknown command ' + str(type(self)))
+        print(f'unknown command {str(type(self))}')
         pprint.pprint(content)
 
     def call_handlers(self, msg):
@@ -193,7 +195,7 @@ class VsIOPubChannel(DefaultHandler, IOPubChannel):
                 return
             except:
                 pass
-        
+
         output_png = data.get('image/png', None)
         if output_png is not None:
             try:
@@ -204,16 +206,16 @@ class VsIOPubChannel(DefaultHandler, IOPubChannel):
                 return
             except:
                 pass
-            
+
         output_str = data.get('text/plain', None)
         if output_str is not None:
             if execution_count is not None:
                 if '\n' in output_str:
                     output_str = '\n' + output_str
-                output_str = 'Out[' + str(execution_count) + ']: ' + output_str
+                output_str = f'Out[{str(execution_count)}]: {output_str}'
 
             self._vs_backend.write_stdout(output_str)
-            self._vs_backend.write_stdout('\n') 
+            self._vs_backend.write_stdout('\n')
             return
 
     def handle_error(self, content):
@@ -232,7 +234,6 @@ class VsIOPubChannel(DefaultHandler, IOPubChannel):
             '   ' + ('.' * (len(str(self._vs_backend.execution_count)) + 2)) + ': ',
             allow_multiple_statements=True
         )
-        pass
         
     def handle_status(self, content):
         pass
@@ -337,14 +338,14 @@ exec(compile(%(contents)r, %(filename)r, 'exec'))
         if filetype == 'script':
             self.execute_file_as_main(filename, args)
         else:
-            raise NotImplementedError("Cannot execute %s file" % filetype)
+            raise NotImplementedError(f"Cannot execute {filetype} file")
 
     def exit_process(self):
         self.exit_lock.release()
 
     def get_members(self, expression):
         """returns a tuple of the type name, instance members, and type members"""
-        text = (expression + '.') if expression else ''
+        text = f'{expression}.' if expression else ''
         if is_ipython_versionorgreater(3, 0):
             self.km.complete(text)
         else:
@@ -358,7 +359,7 @@ exec(compile(%(contents)r, %(filename)r, 'exec'))
         text_len = len(text)
         for member in reply['matches']:
             m_name = member[text_len:]
-            if not any(c in m_name for c in '%!?-.,'):
+            if all(c not in m_name for c in '%!?-.,'):
                 res[m_name] = 'object'
 
         return 'unknown', res, {}
@@ -370,10 +371,10 @@ exec(compile(%(contents)r, %(filename)r, 'exec'))
             self.km.inspect(expression, None, 2)
         else:
             self.km.shell_channel.object_info(expression)
-        
+
         self.members_lock.acquire()
-        
-        reply = self.object_info_reply 
+
+        reply = self.object_info_reply
         if is_ipython_versionorgreater(3, 0):
             data = reply['data']
             text = data['text/plain']
@@ -382,10 +383,7 @@ exec(compile(%(contents)r, %(filename)r, 'exec'))
         else:
             argspec = reply['argspec']
             defaults = argspec['defaults']
-            if defaults is not None:
-                defaults = [repr(default) for default in defaults]
-            else:
-                defaults = []
+            defaults = [] if defaults is None else [repr(default) for default in defaults]
             return [(reply['docstring'], argspec['args'], argspec['varargs'], argspec['varkw'], defaults)]
 
     def interrupt_main(self):

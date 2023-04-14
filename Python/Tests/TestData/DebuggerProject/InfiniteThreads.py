@@ -26,9 +26,6 @@ try:
             # not enough memory for another thread
             print('Failed to create new thread')
             traceback.print_exc()
-        for i in range(100000):
-            pass
-
 except:
     traceback.print_exc()
     input()

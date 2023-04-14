@@ -26,11 +26,12 @@ def _get_package_data():
 
 # Get the wheel url for a specific release
 def _get_debugger_wheel_urls(data, version):
-    return list(
+    return [
         r["url"]
         for r in data["releases"][version]
-        if _contains(r["url"], DEBUGGER_PYTHON_VERSIONS) and not _contains(r["url"], DEBUGGER_EXCLUDED_PLATFORMS)
-    )
+        if _contains(r["url"], DEBUGGER_PYTHON_VERSIONS)
+        and not _contains(r["url"], DEBUGGER_EXCLUDED_PLATFORMS)
+    ]
 
 # Download the wheel from the url and extract the files in the appropriate layout
 def _download_and_extract(root, url, version):

@@ -1,5 +1,5 @@
 def test__pt_pass():
-    assert True
+    pass
 
 def test__pt_fail():
     assert False

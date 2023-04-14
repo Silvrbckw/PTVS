@@ -230,14 +230,11 @@ class AttachLoop(vsipc.SocketIO, vsipc.IpcChannel):
             if os_and_arch == "":
                 os_and_arch = sys.platform
             try:
-                if sys.maxsize > 2**32:
-                    os_and_arch += ' 64-bit'
-                else:
-                    os_and_arch += ' 32-bit'
+                os_and_arch += ' 64-bit' if sys.maxsize > 2**32 else ' 32-bit'
             except AttributeError:
                 pass
 
-            version = '%s %s.%s.%s (%s)' % (impl, major, minor, micro, os_and_arch)
+            version = f'{impl} {major}.{minor}.{micro} ({os_and_arch})'
 
             self.send_response(
                 request,

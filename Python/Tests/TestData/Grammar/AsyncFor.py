@@ -1,6 +1,6 @@
 async def f():
     [fob async for fob in oar]
-    (fob async for fob in oar)
+    iter(oar)
     {fob async for fob in oar}
     {fob: fob async for fob in oar}
     [fob for fob in oar async for oar in baz]

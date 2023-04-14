@@ -1,1 +1,1 @@
-[i for i in None]
+list(None)

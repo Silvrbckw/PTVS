@@ -166,14 +166,14 @@ def read_fastcgi_record(stream):
     stream.read(padding_len)
 
     if fcgi_ver != FCGI_VERSION_1:
-        raise Exception('Unknown fastcgi version %s' % fcgi_ver)
+        raise Exception(f'Unknown fastcgi version {fcgi_ver}')
 
     processor = REQUEST_PROCESSORS.get(reqtype)
     if processor is not None:
         return processor(stream, req_id, content)
 
     # unknown type requested, send response
-    log('Unknown request type %s' % reqtype)
+    log(f'Unknown request type {reqtype}')
     send_response(stream, req_id, FCGI_UNKNOWN_TYPE, chr(reqtype) + zero_bytes(7))
     return None
 
@@ -238,12 +238,15 @@ def write_fastcgi_keyvalue_pairs(pairs):
     for raw_key, raw_value in pairs.items():
         key = wsgi_encode(raw_key)
         value = wsgi_encode(raw_value)
-        
-        parts.append(get_encoded_int(len(key)))
-        parts.append(get_encoded_int(len(value)))
-        parts.append(key)
-        parts.append(value)
 
+        parts.extend(
+            (
+                get_encoded_int(len(key)),
+                get_encoded_int(len(value)),
+                key,
+                value,
+            )
+        )
     return bytes().join(parts)
 
 # Keys in this set will be stored in the record without modification but with a
@@ -265,8 +268,7 @@ def read_fastcgi_params(stream, req_id, content):
     while offset < len(content):
         offset, name, value = read_fastcgi_keyvalue_pairs(content, offset)
         name = wsgi_decode(name)
-        raw_name = RAW_VALUE_NAMES.get(name)
-        if raw_name:
+        if raw_name := RAW_VALUE_NAMES.get(name):
             res[raw_name] = value
         res[name] = wsgi_decode(value)
 
@@ -344,9 +346,8 @@ def log(txt):
             APPINSIGHT_CLIENT.track_event(txt)
         except:
             pass
-    
-    log_file = os.environ.get('WSGI_LOG')
-    if log_file:
+
+    if log_file := os.environ.get('WSGI_LOG'):
         with open(log_file, 'a+', encoding='utf-8') as f:
             txt = txt.replace('\r\n', '\n')
             f.write('%s: %s%s' % (datetime.datetime.now(), txt, '' if txt.endswith('\n') else '\n'))
@@ -477,7 +478,7 @@ def run_exit_tasks():
             try:
                 t()
             except Exception:
-                maybe_log("Error in exit task: " + traceback.format_exc())
+                maybe_log(f"Error in exit task: {traceback.format_exc()}")
 
 def on_exit(task):
     global _ON_EXIT_TASKS
@@ -486,7 +487,7 @@ def on_exit(task):
         try:
             evt = int(os.getenv('_FCGI_SHUTDOWN_EVENT_'))
         except (TypeError, ValueError):
-            maybe_log("Could not wait on event %s" % os.getenv('_FCGI_SHUTDOWN_EVENT_'))
+            maybe_log(f"Could not wait on event {os.getenv('_FCGI_SHUTDOWN_EVENT_')}")
         else:
             def _wait_for_exit():
                 WaitForSingleObject(evt, INFINITE)
@@ -502,7 +503,7 @@ def start_file_watcher(path, restart_regex):
     elif not restart_regex:
         # restart regex set to empty string, no restart behavior
         return
-    
+
     def enum_changes(path):
         """Returns a generator that blocks until a change occurs, then yields
         the filename of the changed file.
@@ -547,9 +548,7 @@ def start_file_watcher(path, restart_regex):
                 cur_pointer = ctypes.addressof(buffer)
                 while True:
                     fni = ctypes.cast(cur_pointer, ctypes.POINTER(FILE_NOTIFY_INFORMATION))
-                    # FileName is not null-terminated, so specifying length is mandatory.
-                    filename = ctypes.wstring_at(cur_pointer + 12, fni.contents.FileNameLength // 2)
-                    yield filename
+                    yield ctypes.wstring_at(cur_pointer + 12, fni.contents.FileNameLength // 2)
                     if fni.contents.NextEntryOffset == 0:
                         break
                     cur_pointer = cur_pointer + fni.contents.NextEntryOffset
@@ -561,7 +560,9 @@ def start_file_watcher(path, restart_regex):
                 CloseHandle(the_dir)
                 return
 
-    log('wfastcgi.py will restart when files in %s are changed: %s' % (path, restart_regex))
+    log(
+        f'wfastcgi.py will restart when files in {path} are changed: {restart_regex}'
+    )
     def watcher(path, restart):
         for filename in enum_changes(path):
             if not filename:
@@ -569,7 +570,9 @@ def start_file_watcher(path, restart_regex):
                 run_exit_tasks()
                 ExitProcess(0)
             elif restart.match(filename):
-                log('wfastcgi.py exiting because %s has changed, matching %s' % (filename, restart_regex))
+                log(
+                    f'wfastcgi.py exiting because {filename} has changed, matching {restart_regex}'
+                )
                 # we call ExitProcess directly to quickly shutdown the whole process
                 # because sys.exit(0) won't have an effect on the main thread.
                 run_exit_tasks()
@@ -581,10 +584,10 @@ def start_file_watcher(path, restart_regex):
 def get_wsgi_handler(handler_name):
     if not handler_name:
         raise Exception('WSGI_HANDLER env var must be set')
-    
+
     if not isinstance(handler_name, str):
         handler_name = to_str(handler_name)
-    
+
     module_name, _, callable_name = handler_name.rpartition('.')
     should_call = callable_name.endswith('()')
     callable_name = callable_name[:-2] if should_call else callable_name
@@ -607,11 +610,11 @@ def get_wsgi_handler(handler_name):
             callable_name = callable_name[:-2] if should_call else callable_name
             name_list.insert(0, (callable_name, should_call))
             handler = None
-            last_tb = ': ' + traceback.format_exc()
-    
+            last_tb = f': {traceback.format_exc()}'
+
     if handler is None:
-        raise ValueError('"%s" could not be imported%s' % (handler_name, last_tb))
-    
+        raise ValueError(f'"{handler_name}" could not be imported{last_tb}')
+
     return handler
 
 def read_wsgi_handler(physical_path):
@@ -626,16 +629,15 @@ def read_wsgi_handler(physical_path):
             path
         )
         sys.path.extend(fs_encode(p) for p in expanded_path.split(';') if p)
-    
+
     handler = get_wsgi_handler(os.getenv("WSGI_HANDLER"))
-    instr_key = os.getenv("APPINSIGHTS_INSTRUMENTATIONKEY")
-    if instr_key:
+    if instr_key := os.getenv("APPINSIGHTS_INSTRUMENTATIONKEY"):
         try:
             # Attempt the import after updating sys.path - sites must
             # include applicationinsights themselves.
             from applicationinsights.requests import WSGIApplication
         except ImportError:
-            maybe_log("Failed to import applicationinsights: " + traceback.format_exc())
+            maybe_log(f"Failed to import applicationinsights: {traceback.format_exc()}")
         else:
             handler = WSGIApplication(instr_key, handler)
             APPINSIGHT_CLIENT = handler.client
@@ -758,8 +760,8 @@ _REQUESTS = {}
 
 def main():
     initialized = False
-    log('wfastcgi.py %s started' % __version__)
-    log('Python version: %s' % sys.version)
+    log(f'wfastcgi.py {__version__} started')
+    log(f'Python version: {sys.version}')
 
     try:
         fcgi_stream = sys.stdin.detach() if sys.version_info[0] >= 3 else sys.stdin
@@ -779,7 +781,7 @@ def main():
 
             with handle_response(fcgi_stream, record, output.getvalue, errors.getvalue) as response:
                 if not initialized:
-                    log('wfastcgi.py %s initializing' % __version__)
+                    log(f'wfastcgi.py {__version__} initializing')
 
                     os.chdir(response.physical_path)
                     sys.path[0] = '.'
@@ -792,17 +794,14 @@ def main():
                     response.error_message = 'Error occurred starting file watcher'
                     start_file_watcher(response.physical_path, env.get('WSGI_RESTART_FILE_REGEX'))
 
-                    # Enable debugging if possible. Default to local-only, but
-                    # allow a web.config to override where we listen
-                    ptvsd_secret = env.get('WSGI_PTVSD_SECRET')
-                    if ptvsd_secret:
+                    if ptvsd_secret := env.get('WSGI_PTVSD_SECRET'):
                         ptvsd_address = (env.get('WSGI_PTVSD_ADDRESS') or 'localhost:5678').split(':', 2)
                         try:
                             ptvsd_port = int(ptvsd_address[1])
                         except LookupError:
                             ptvsd_port = 5678
                         except ValueError:
-                            log('"%s" is not a valid port number for debugging' % ptvsd_address[1])
+                            log(f'"{ptvsd_address[1]}" is not a valid port number for debugging')
                             ptvsd_port = 0
 
                         if ptvsd_address[0] and ptvsd_port:
@@ -818,7 +817,7 @@ def main():
                     response.error_message = ''
                     response.fatal_errors = False
 
-                    log('wfastcgi.py %s initialized' % __version__)
+                    log(f'wfastcgi.py {__version__} initialized')
                     initialized = True
 
                 os.environ.update(env)
@@ -854,13 +853,13 @@ def main():
     except _ExitException:
         pass
     except Exception:
-        maybe_log('Unhandled exception in wfastcgi.py: ' + traceback.format_exc())
+        maybe_log(f'Unhandled exception in wfastcgi.py: {traceback.format_exc()}')
     except BaseException:
-        maybe_log('Unhandled exception in wfastcgi.py: ' + traceback.format_exc())
+        maybe_log(f'Unhandled exception in wfastcgi.py: {traceback.format_exc()}')
         raise
     finally:
         run_exit_tasks()
-        maybe_log('wfastcgi.py %s closed' % __version__)
+        maybe_log(f'wfastcgi.py {__version__} closed')
 
 def _run_appcmd(args):
     from subprocess import check_call, CalledProcessError
@@ -886,27 +885,39 @@ Ensure your user has sufficient privileges and try again.''' % args, file=sys.st
         return ex.returncode
 
 def enable():
-    executable = '"' + sys.executable + '"' if ' ' in sys.executable else sys.executable
-    quoted_file = '"' + __file__ + '"' if ' ' in __file__ else __file__
-    res = _run_appcmd([
-        "set", "config", "/section:system.webServer/fastCGI",
-        "/+[fullPath='" + executable + "', arguments='" + quoted_file + "', signalBeforeTerminateSeconds='30']"
-    ])
+    executable = f'"{sys.executable}"' if ' ' in sys.executable else sys.executable
+    quoted_file = f'"{__file__}"' if ' ' in __file__ else __file__
+    res = _run_appcmd(
+        [
+            "set",
+            "config",
+            "/section:system.webServer/fastCGI",
+            f"/+[fullPath='{executable}', arguments='{quoted_file}', signalBeforeTerminateSeconds='30']",
+        ]
+    )
 
     if res == 0:
-        print('"%s|%s" can now be used as a FastCGI script processor' % (executable, quoted_file))
+        print(
+            f'"{executable}|{quoted_file}" can now be used as a FastCGI script processor'
+        )
     return res
 
 def disable():
-    executable = '"' + sys.executable + '"' if ' ' in sys.executable else sys.executable
-    quoted_file = '"' + __file__ + '"' if ' ' in __file__ else __file__    
-    res = _run_appcmd([
-        "set", "config", "/section:system.webServer/fastCGI",
-        "/-[fullPath='" + executable + "', arguments='" + quoted_file + "', signalBeforeTerminateSeconds='30']"
-    ])
+    executable = f'"{sys.executable}"' if ' ' in sys.executable else sys.executable
+    quoted_file = f'"{__file__}"' if ' ' in __file__ else __file__
+    res = _run_appcmd(
+        [
+            "set",
+            "config",
+            "/section:system.webServer/fastCGI",
+            f"/-[fullPath='{executable}', arguments='{quoted_file}', signalBeforeTerminateSeconds='30']",
+        ]
+    )
 
     if res == 0:
-        print('"%s|%s" is no longer registered for use with FastCGI' % (executable, quoted_file))
+        print(
+            f'"{executable}|{quoted_file}" is no longer registered for use with FastCGI'
+        )
     return res
 
 if __name__ == '__main__':

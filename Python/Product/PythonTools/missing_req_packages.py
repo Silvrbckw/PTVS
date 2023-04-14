@@ -51,7 +51,7 @@ def auto_decode(data):
             return data[len(bom):].decode(encoding)
     # Lets check the first two lines as in PEP263
     for line in data.split(b'\n')[:2]:
-        if line[0:1] == b'#' and ENCODING_RE.search(line):
+        if line[:1] == b'#' and ENCODING_RE.search(line):
             encoding = ENCODING_RE.search(line).groups()[0].decode('ascii')
             return data.decode(encoding)
     return data.decode(locale.getpreferredencoding(False) or sys.getdefaultencoding())
@@ -76,28 +76,28 @@ for line in req_txt_lines:
 
         # "git+..." is a valid requirements.txt instruction, but it's not supported by pkg_resource
         if line.lower().startswith("git+"):
-            print("Git : {}".format(line))
+            print(f"Git : {line}")
             git_req += 1
             continue
 
         pkg_resources.require(line)
-        print("Installed : {}".format(line))
+        print(f"Installed : {line}")
         req_met += 1
     except pkg_resources.DistributionNotFound:
-        print("NotFound : {}".format(line))
+        print(f"NotFound : {line}")
         not_found += 1
     except pkg_resources.VersionConflict:
-        print("VersionConflict : {}".format(line))
+        print(f"VersionConflict : {line}")
         version_conflict += 1
     except Exception:
-        print("Invalid : {}".format(line))
+        print(f"Invalid : {line}")
         invalid_req += 1
 
-print("InstalledCount : {}".format(req_met))
-print("GitCount : {}".format(git_req))
-print("NotFoundCount : {}".format(not_found))
-print("VersionConflictCount : {}".format(version_conflict))
-print("InvalidCount : {}".format(invalid_req))
+print(f"InstalledCount : {req_met}")
+print(f"GitCount : {git_req}")
+print(f"NotFoundCount : {not_found}")
+print(f"VersionConflictCount : {version_conflict}")
+print(f"InvalidCount : {invalid_req}")
 
 if not_found or version_conflict:
     sys.exit(1)

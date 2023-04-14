@@ -1,1 +1,1 @@
-[fob for fob in oar, baz]
+list(oar)

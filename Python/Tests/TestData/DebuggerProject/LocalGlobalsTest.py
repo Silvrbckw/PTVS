@@ -1,7 +1,6 @@
 def fob():
   global x
   x = 1
-  pass
 
 fob()
 

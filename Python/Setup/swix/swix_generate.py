@@ -26,9 +26,7 @@ def get_dirs(root):
             yield from get_dirs(d)
 
 def open_or_stdout(filename):
-    if filename:
-        return open(filename, 'a', encoding='utf-8')
-    return StdOutContext()
+    return open(filename, 'a', encoding='utf-8') if filename else StdOutContext()
 
 def main():
     parser = argparse.ArgumentParser(description="Generates SWR lines from a directory")

@@ -3,7 +3,7 @@ d1 = {42: 100}
 d2 = {'abc': 'fob'}
 d3 = {1e1000: d1}
 u1 = u"привет мир"
-s = set([frozenset([2,3,4])])
+s = {frozenset([2,3,4])}
 class C(object):
     abc = 42
     uc = u"привет мир"
@@ -40,5 +40,3 @@ c3inst = C3()
 l = [1, 2, ]
 
 i = 3
-
-pass

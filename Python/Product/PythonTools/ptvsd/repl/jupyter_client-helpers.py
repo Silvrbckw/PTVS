@@ -26,7 +26,7 @@ def __ptvs_repl_sig_repr(o):
     try:
         ast.literal_eval(r)
     except:
-        return type(o).__name__ + '()'
+        return f'{type(o).__name__}()'
     else:
         return r
 
@@ -76,7 +76,7 @@ def __ptvs_repl_split_args(args):
 def __ptvs_repl_exec_script(filename, args, globals, locals):
     with open(filename, 'rb') as f:
         content = f.read().replace('\\r\\n'.encode('ascii'), '\\n'.encode('ascii'))
-    
+
     import os, sys
     orig_name = globals.get('__name__')
     globals['__name__'] = '__main__'
@@ -91,13 +91,10 @@ def __ptvs_repl_exec_script(filename, args, globals, locals):
         pop_path_0 = True
     else:
         pop_path_0 = False
-    
+
     try:
-        if sys.version_info[0] == 2:
-            # Handle issue on Python 2.x where it will incorrectly encode
-            # filename as ASCII instead of the filesystem encoding
-            if isinstance(filename, unicode):
-                filename = filename.encode(sys.getfilesystemencoding(), 'ignore')
+        if sys.version_info[0] == 2 and isinstance(filename, unicode):
+            filename = filename.encode(sys.getfilesystemencoding(), 'ignore')
         code = compile(content, filename, 'exec')
         exec(code, globals, locals)
     finally:
@@ -126,7 +123,7 @@ def __ptvs_repl_exec_process(filename, args, globals, locals):
     out_codec = codecs.lookup(sys.stdout.encoding)
 
     proc = subprocess.Popen(
-        '"%s" %s' % (filename, args),
+        f'"{filename}" {args}',
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         bufsize=0,

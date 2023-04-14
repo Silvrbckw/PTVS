@@ -24,7 +24,11 @@ from ptvsd.util import exec_file
 from ptvsd.debugger import DONT_DEBUG
 from ptvsd import DEFAULT_PORT, enable_attach, wait_for_attach
 
-parser = OptionParser(prog = 'ptvsd', usage = 'Usage: %prog [<option>]... <file> [- <args>]', version = '%prog ' + __version__)
+parser = OptionParser(
+    prog='ptvsd',
+    usage='Usage: %prog [<option>]... <file> [- <args>]',
+    version=f'%prog {__version__}',
+)
 parser.add_option('-s', '--secret', metavar = '<secret>', help = 'restrict server to only allow clients that specify <secret> when connecting')
 parser.add_option('-i', '--interface', default = '0.0.0.0', metavar = '<ip-address>', help = 'listen for debugger connections on interface <ip-address>')
 parser.add_option('-p', '--port', type='int', default = DEFAULT_PORT, metavar = '<port>', help = 'listen for debugger connections on <port>')

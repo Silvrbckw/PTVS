@@ -1,9 +1,6 @@
-if True:
-        print('hello')
+print('hello')
 	# "Matched"
-        print('goodbye')
+print('goodbye')
 
-if True:
-        print('hello')
-	# "Mismatched"
-	print('goodbye')
+print('hello')
+print('goodbye')

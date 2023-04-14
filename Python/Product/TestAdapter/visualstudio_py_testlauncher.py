@@ -75,10 +75,7 @@ class _TestOutput(object):
     
     @property
     def name(self):
-        if self.is_stdout:
-            return "<stdout>"
-        else:
-            return "<stderr>"
+        return "<stdout>" if self.is_stdout else "<stderr>"
 
     def __getattr__(self, name):
         return getattr(self.old_out, name)
@@ -201,7 +198,7 @@ class VsTestResult(TextTestResult):
 
 def _get_traceback(trace):
     def norm_module(file_path):
-        return os.path.splitext(os.path.normcase(file_path))[0] + '.py'
+        return f'{os.path.splitext(os.path.normcase(file_path))[0]}.py'
 
     def is_framework_frame(f):
         return is_excluded_module_path(norm_module(f[0]))
@@ -209,7 +206,7 @@ def _get_traceback(trace):
     if _IS_OLD_UNITTEST:
         def is_excluded_module_path(file_path):
             # unittest is a module, not a package on 2.5, 2.6, 3.0, 3.1
-            return file_path == norm_module(unittest.__file__) or file_path == norm_module(__file__)
+            return file_path in [norm_module(unittest.__file__), norm_module(__file__)]
 
     else:
         def is_excluded_module_path(file_path):
@@ -269,18 +266,14 @@ def main():
         # so we have to use Win32 API in a loop to do the same thing.
         from time import sleep
         from ctypes import windll, c_char
-        while True:
-            if windll.kernel32.IsDebuggerPresent() != 0:
-                break
+        while True and windll.kernel32.IsDebuggerPresent() == 0:
             sleep(0.1)
         try:
             debugger_helper = windll['Microsoft.PythonTools.Debugger.Helper.x86.dll']
         except WindowsError:
             debugger_helper = windll['Microsoft.PythonTools.Debugger.Helper.x64.dll']
         isTracing = c_char.in_dll(debugger_helper, "isTracing")
-        while True:
-            if isTracing.value != 0:
-                break
+        while True and isTracing.value == 0:
             sleep(0.1)
 
     all_tests = list(opts.tests or [])
@@ -359,7 +352,7 @@ def main():
             runner = unittest.TextTestRunner(verbosity=0)
         else:
             runner = unittest.TextTestRunner(verbosity=0, resultclass=VsTestResult)
-        
+
         result = runner.run(unittest.defaultTestLoader.suiteClass(tests))
 
         sys.exit(not result.wasSuccessful())
@@ -367,7 +360,7 @@ def main():
         if cov is not None:
             cov.stop()
             cov.save()
-            cov.xml_report(outfile = opts.coverage + '.xml', omit=__file__)
+            cov.xml_report(outfile=f'{opts.coverage}.xml', omit=__file__)
         if _channel is not None:
             _channel.send_event(
                 name='done'

@@ -3,7 +3,7 @@ while True:
     pass
 
 def test_pt_pass():
-    assert True
+    pass
 
 def test_pt_fail():
     assert False
